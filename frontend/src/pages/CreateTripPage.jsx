@@ -41,7 +41,7 @@ export default function CreateTripPage() {
       
       console.log('FORM: Trip created successfully, redirecting...');
       toast.success('Trip created successfully! View it in My Trips.');
-      navigate('/trips');
+      navigate('/my-trips');
     } catch (error) {
       console.error('FORM SUBMIT ERROR:', error);
       toast.error(`Failed to create trip: ${error.message || 'Unknown error'}`);

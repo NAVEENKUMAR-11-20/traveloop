@@ -52,12 +52,21 @@ export default function MyTripsPage() {
     }
   };
 
+  const formatDate = (dateStr, formatStr) => {
+    try {
+      if (!dateStr) return 'TBD';
+      return format(parseISO(dateStr), formatStr);
+    } catch (e) {
+      return 'Invalid Date';
+    }
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="section-title">My Trips</h1>
-          <p className="section-subtitle">{trips.length} {trips.length === 1 ? 'trip' : 'trips'} total</p>
+          <p className="section-subtitle">{(trips || []).length} {trips?.length === 1 ? 'trip' : 'trips'} total</p>
         </div>
         <Link to="/create-trip" className="btn-primary flex items-center gap-2 text-sm w-full sm:w-auto justify-center">
           <PlusCircle className="w-4 h-4" /> New Trip
@@ -86,7 +95,7 @@ export default function MyTripsPage() {
       </div>
 
       {/* Trip cards */}
-      {filtered.length === 0 ? (
+      {(!filtered || filtered.length === 0) ? (
         <div className="card p-12 text-center">
           <Filter className="w-12 h-12 text-dark-500 mx-auto mb-3" />
           <p className="text-dark-200 font-medium">No trips found</p>
@@ -95,22 +104,26 @@ export default function MyTripsPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((trip, i) => {
-            const budgetPercent = trip.budget > 0 ? Math.round((trip.spent / trip.budget) * 100) : 0;
+            const budget = Number(trip.budget) || 0;
+            const spent = Number(trip.spent) || 0;
+            const budgetPercent = budget > 0 ? Math.round((spent / budget) * 100) : 0;
+            
             return (
               <motion.div key={trip.id} initial="hidden" animate="visible" variants={fadeUp} custom={i}>
                 <div className="card overflow-hidden group">
                   {/* Image */}
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <img src={trip.cover_image} alt={trip.title} loading="lazy"
+                    <img src={trip.cover_image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=500'} 
+                      alt={trip.title} loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                     <span className={`absolute top-3 left-3 ${statusColors[trip.status] || 'badge-primary'} capitalize`}>
-                      {trip.status}
+                      {trip.status || 'planning'}
                     </span>
                     <div className="absolute bottom-3 left-3 right-3">
-                      <h3 className="text-white font-bold truncate">{trip.title}</h3>
+                      <h3 className="text-white font-bold truncate">{trip.title || 'Untitled Trip'}</h3>
                       <p className="text-white/60 text-xs flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> {trip.destination}
+                        <MapPin className="w-3 h-3" /> {trip.destination || 'Global'}
                       </p>
                     </div>
                   </div>
@@ -120,15 +133,15 @@ export default function MyTripsPage() {
                     <div className="flex items-center gap-3 text-xs text-dark-400 mb-3">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5" />
-                        {format(parseISO(trip.start_date), 'MMM d')} – {format(parseISO(trip.end_date), 'MMM d, yyyy')}
+                        {formatDate(trip.start_date, 'MMM d')} – {formatDate(trip.end_date, 'MMM d, yyyy')}
                       </span>
                     </div>
 
                     {/* Budget bar */}
                     <div className="mb-3">
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-dark-300">₹{trip.spent.toLocaleString('en-IN')} spent</span>
-                        <span className="text-dark-400">₹{trip.budget.toLocaleString('en-IN')} budget</span>
+                        <span className="text-dark-300">₹{spent.toLocaleString('en-IN')} spent</span>
+                        <span className="text-dark-400">₹{budget.toLocaleString('en-IN')} budget</span>
                       </div>
                       <div className="w-full h-1.5 bg-dark-700 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${budgetPercent > 90 ? 'bg-red-500' : budgetPercent > 70 ? 'bg-amber-500' : 'bg-accent-500'}`}

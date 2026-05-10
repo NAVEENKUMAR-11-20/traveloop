@@ -74,6 +74,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/create-trip" element={<CreateTripPage />} />
           <Route path="/trips" element={<MyTripsPage />} />
+          <Route path="/my-trips" element={<MyTripsPage />} />
           <Route path="/trips/:id" element={<TripDetailPage />} />
           <Route path="/trips/:id/edit" element={<CreateTripPage />} />
           <Route path="/city-search" element={<CitySearchPage />} />
