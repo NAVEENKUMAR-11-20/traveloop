@@ -30,9 +30,18 @@ export default function TripDetailPage() {
   const {
     getTrip, updateItinerary, addPackingItem, togglePackingItem,
     removePackingItem, addJournalEntry, deleteJournalEntry,
+    loading
   } = useTrips();
   const trip = getTrip(id);
   const [activeTab, setActiveTab] = useState('itinerary');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-dark-700 border-t-accent-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
   const [showAddAct, setShowAddAct] = useState(null);
   const [newAct, setNewAct] = useState({ time: '', name: '', cost: '', type: 'sightseeing' });
   const [showAddDay, setShowAddDay] = useState(false);

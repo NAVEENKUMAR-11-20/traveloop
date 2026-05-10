@@ -22,7 +22,15 @@ const recommendations = [
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { trips } = useTrips();
+  const { trips, loading } = useTrips();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-dark-700 border-t-accent-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const upcomingTrips = trips.filter(t => t.status === 'upcoming' || t.status === 'planning')
     .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));

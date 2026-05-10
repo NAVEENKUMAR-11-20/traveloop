@@ -25,19 +25,22 @@ export default function CreateTripPage() {
   const { addTrip } = useTrips();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const trip = addTrip({
-      title,
-      destination,
-      start_date: startDate,
-      end_date: endDate,
-      description,
-      budget: Number(budget) || 0,
-      cover_image: selectedCover,
-    });
-    toast.success('Trip created successfully!');
-    navigate(`/trips/${trip.id}`);
+    try {
+      const trip = await addTrip({
+        title,
+        destination,
+        start_date: startDate,
+        end_date: endDate,
+        description,
+        budget: Number(budget) || 0,
+        cover_image: selectedCover,
+      });
+      navigate(`/trips/${trip.id}`);
+    } catch (error) {
+      console.error('Submit error:', error);
+    }
   };
 
   return (

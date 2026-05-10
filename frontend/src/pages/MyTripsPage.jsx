@@ -15,19 +15,27 @@ const fadeUp = {
 };
 
 export default function MyTripsPage() {
-  const { trips, deleteTrip } = useTrips();
+  const { trips, deleteTrip, loading } = useTrips();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteModal, setDeleteModal] = useState(null);
 
   const filtered = useMemo(() => {
     return trips.filter(t => {
-      const matchSearch = t.title.toLowerCase().includes(search.toLowerCase()) ||
-        t.destination.toLowerCase().includes(search.toLowerCase());
+      const matchSearch = (t.title || '').toLowerCase().includes(search.toLowerCase()) ||
+        (t.destination || '').toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'all' || t.status === statusFilter;
       return matchSearch && matchStatus;
     });
   }, [trips, search, statusFilter]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-dark-700 border-t-accent-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const statusColors = {
     planning: 'badge-primary',
@@ -35,10 +43,13 @@ export default function MyTripsPage() {
     completed: 'badge-success',
   };
 
-  const handleDelete = (id) => {
-    deleteTrip(id);
-    setDeleteModal(null);
-    toast.success('Trip deleted');
+  const handleDelete = async (id) => {
+    try {
+      await deleteTrip(id);
+      setDeleteModal(null);
+    } catch (error) {
+      console.error('Delete error:', error);
+    }
   };
 
   return (
