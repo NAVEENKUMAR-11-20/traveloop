@@ -1,22 +1,10 @@
 {
-<<<<<<< HEAD
-  "name": "travel-root",
-  "version": "1.0.0",
-  "scripts": {
-    "dev": "npm run dev --prefix ../traveloop/frontend",
-    "install-frontend": "npm install --prefix ../traveloop/frontend"
-  },
-  "dependencies": {
-    "lucide-react": "^1.14.0"
-=======
   "name": "traveloop-root",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
-    "start": "npm start --prefix frontend",
-    "install-all": "npm install --prefix frontend && npm install --prefix backend"
->>>>>>> 22d325973cb2f700a2c1fec0b1547d255abf1695
+    "install-frontend": "npm install --prefix frontend"
   }
 }
