@@ -26,7 +26,7 @@ export default function ActivitySearchPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [added, setAdded] = useState(new Set());
-  const { addTrip, trips } = useTrips();
+  const { refreshTrips, trips } = useTrips();
 
   const filtered = useMemo(() => {
     return allActivities.filter(a => {
@@ -102,6 +102,7 @@ export default function ActivitySearchPage() {
           next.add(activity.id);
           return next;
         });
+        await refreshTrips();
         toast.success(`Added to your trip: ${latestTrip.title}`);
       } catch (error) {
         console.error('SUPABASE ACTIVITY ERROR:', error);

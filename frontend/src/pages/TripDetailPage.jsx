@@ -69,7 +69,7 @@ export default function TripDetailPage() {
   const itinerary = trip.itinerary || [];
   const packing = trip.packing || [];
   const journal = trip.journal || [];
-  const allActivities = trip.activities || [];
+  const allActivities = trip.trip_activities || [];
   const globalActivities = allActivities.filter(a => !a.stop_id);
 
   const safeParseDate = (d) => {

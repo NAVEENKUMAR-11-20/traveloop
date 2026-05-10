@@ -19,9 +19,9 @@ export const tripService = {
           *,
           itinerary:trip_stops(
             *,
-            activities:trip_activities(*)
+            activities:trip_activities!stop_id(*)
           ),
-          activities:trip_activities(*)
+          trip_activities:trip_activities!trip_id(*)
         `)
         .eq('user_id', String(userId))
         .order('created_at', { ascending: false });
@@ -160,7 +160,7 @@ export const tripService = {
   addActivity: async (stopId, activityData) => {
     if (!isSupabaseConfigured()) return activityData;
     const { data, error } = await supabase
-      .from('activities')
+      .from('trip_activities')
       .insert([{ stop_id: stopId, ...activityData }])
       .select()
       .single();
@@ -171,7 +171,7 @@ export const tripService = {
   getActivities: async (stopId) => {
     if (!isSupabaseConfigured()) return [];
     const { data, error } = await supabase
-      .from('activities')
+      .from('trip_activities')
       .select('*')
       .eq('stop_id', stopId);
     if (error) throw error;
