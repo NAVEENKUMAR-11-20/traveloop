@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Clock, IndianRupee, PlusCircle, Compass, X } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
+import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
 
 const allActivities = [
@@ -36,54 +37,55 @@ export default function ActivitySearchPage() {
   }, [search, typeFilter]);
 
   const toggleAdd = async (activity) => {
+    if (!trips || trips.length === 0) {
+      toast.error('Please create a trip first from the "Create Trip" page!');
+      return;
+    }
+
+    const latestTrip = trips[0]; // Add to the most recent trip
+
     if (added.has(activity.id)) {
-      setAdded(prev => {
-        const next = new Set(prev);
-        next.delete(activity.id);
-        return next;
-      });
-      toast.success('Activity removed');
+      try {
+        // Logic to remove from database would go here if we had activity IDs
+        // For now, we'll just update UI and notify
+        setAdded(prev => {
+          const next = new Set(prev);
+          next.delete(activity.id);
+          return next;
+        });
+        toast.success('Activity removed from your trip');
+      } catch (error) {
+        toast.error('Failed to remove activity');
+      }
     } else {
       try {
-        // Create a new trip plan from this activity
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(startDate.getDate() + 1);
+        console.log('SUPABASE: Adding activity to trip:', latestTrip.id);
+        
+        const { data, error } = await supabase
+          .from('trip_activities')
+          .insert([{
+            trip_id: latestTrip.id,
+            user_id: String(latestTrip.user_id),
+            activity_name: activity.name,
+            category: activity.type,
+            cost: activity.cost,
+            duration: activity.duration,
+            image_url: activity.image
+          }])
+          .select()
+          .single();
 
-        await addTrip({
-          title: `Trip to ${activity.name}`,
-          destination: activity.name,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0],
-          description: activity.description,
-          budget: activity.cost,
-          cover_image: activity.image,
-          status: 'planning',
-          spent: 0,
-          itinerary: [
-            {
-              day: 1,
-              date: startDate.toISOString().split('T')[0],
-              title: 'Activity Day',
-              activities: [
-                {
-                  time: '10:00',
-                  name: activity.name,
-                  cost: activity.cost,
-                  type: activity.type
-                }
-              ]
-            }
-          ]
-        });
+        if (error) throw error;
 
         setAdded(prev => {
           const next = new Set(prev);
           next.add(activity.id);
           return next;
         });
+        toast.success(`Added to your trip: ${latestTrip.title}`);
       } catch (error) {
-        console.error('Failed to save activity as trip:', error);
+        console.error('SUPABASE ACTIVITY ERROR:', error);
+        toast.error('Failed to add activity to database');
       }
     }
   };

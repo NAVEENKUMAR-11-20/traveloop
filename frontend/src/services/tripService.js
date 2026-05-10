@@ -4,29 +4,46 @@ const STORAGE_KEY = 'traveloop_trips';
 
 export const tripService = {
   getTrips: async (userId) => {
+    console.log('SUPABASE: Fetching trips for user:', userId);
+    
     if (!isSupabaseConfigured()) {
+      console.warn('SUPABASE: Using local storage fallback for fetch.');
       const local = localStorage.getItem(STORAGE_KEY);
       return local ? JSON.parse(local) : [];
     }
 
-    const { data, error } = await supabase
-      .from('trips')
-      .select(`
-        *,
-        itinerary:trip_stops(
+    try {
+      const { data, error } = await supabase
+        .from('trips')
+        .select(`
           *,
-          activities(*)
-        )
-      `)
-      .eq('user_id', userId)
-      .order('start_date', { ascending: true });
+          itinerary:trip_stops(
+            *,
+            activities:trip_activities(*)
+          )
+        `)
+        .eq('user_id', String(userId))
+        .order('start_date', { ascending: true });
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error('SUPABASE FETCH ERROR:', error);
+        throw error;
+      }
+
+      console.log(`SUPABASE: Found ${data?.length || 0} trips.`);
+      return data;
+    } catch (err) {
+      console.error('SUPABASE: Error fetching trips:', err);
+      throw err;
+    }
   },
 
   createTrip: async (tripData, userId) => {
+    console.log('SUPABASE: Attempting to create trip for user:', userId);
+    console.log('SUPABASE: Trip Data:', tripData);
+
     if (!isSupabaseConfigured()) {
+      console.warn('SUPABASE: Using local storage fallback.');
       const local = localStorage.getItem(STORAGE_KEY);
       const trips = local ? JSON.parse(local) : [];
       const newTrip = { ...tripData, id: crypto.randomUUID(), user_id: userId, itinerary: [] };
@@ -35,14 +52,36 @@ export const tripService = {
       return newTrip;
     }
 
-    const { data, error } = await supabase
-      .from('trips')
-      .insert([{ ...tripData, user_id: userId }])
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('trips')
+        .insert([{ 
+          title: tripData.title,
+          destination: tripData.destination,
+          start_date: tripData.start_date,
+          end_date: tripData.end_date,
+          description: tripData.description,
+          budget: Number(tripData.budget) || 0,
+          cover_image: tripData.cover_image,
+          user_id: String(userId) 
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error('SUPABASE INSERT ERROR:', error);
+        console.error('Error Code:', error.code);
+        console.error('Error Message:', error.message);
+        console.error('Error Details:', error.details);
+        throw error;
+      }
+
+      console.log('SUPABASE: Trip created successfully:', data);
+      return data;
+    } catch (err) {
+      console.error('SUPABASE: Unexpected error during trip creation:', err);
+      throw err;
+    }
   },
 
   updateTrip: async (tripId, tripData) => {

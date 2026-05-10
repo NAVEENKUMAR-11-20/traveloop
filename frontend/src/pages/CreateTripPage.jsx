@@ -28,6 +28,7 @@ export default function CreateTripPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('FORM: Submitting trip data...');
       const trip = await addTrip({
         title,
         destination,
@@ -37,9 +38,13 @@ export default function CreateTripPage() {
         budget: Number(budget) || 0,
         cover_image: selectedCover,
       });
-      navigate(`/trips/${trip.id}`);
+      
+      console.log('FORM: Trip created successfully, redirecting...');
+      toast.success('Trip created successfully! View it in My Trips.');
+      navigate('/trips');
     } catch (error) {
-      console.error('Submit error:', error);
+      console.error('FORM SUBMIT ERROR:', error);
+      toast.error(`Failed to create trip: ${error.message || 'Unknown error'}`);
     }
   };
 

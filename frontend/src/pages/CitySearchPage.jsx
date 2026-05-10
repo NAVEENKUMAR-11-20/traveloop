@@ -1,28 +1,36 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Star, PlusCircle, MapPin, Globe } from 'lucide-react';
+import { useTrips } from '../context/TripContext';
+import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
 
 const allCities = [
   { id: 1, name: 'Jaipur', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?w=500&q=80', rating: 4.8, costIndex: '₹₹', description: 'The Pink City of royal palaces and vibrant bazaars' },
-  { id: 2, name: 'Tokyo', country: 'Japan', continent: 'Asia', image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=500&q=80', rating: 4.9, costIndex: '₹₹₹₹', description: 'A dazzling blend of tradition and modernity' },
-  { id: 3, name: 'Paris', country: 'France', continent: 'Europe', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80', rating: 4.8, costIndex: '₹₹₹₹', description: 'The city of love and lights' },
   { id: 4, name: 'Goa', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=500&q=80', rating: 4.5, costIndex: '₹₹', description: 'Sun-kissed beaches and Portuguese heritage' },
   { id: 5, name: 'Manali', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=500&q=80', rating: 4.7, costIndex: '₹₹', description: 'Snow-capped peaks and adventure sports' },
-  { id: 6, name: 'Santorini', country: 'Greece', continent: 'Europe', image: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=500&q=80', rating: 4.9, costIndex: '₹₹₹₹', description: 'Iconic white-washed cliffs and sunsets' },
-  { id: 7, name: 'Bali', country: 'Indonesia', continent: 'Asia', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=500&q=80', rating: 4.7, costIndex: '₹₹₹', description: 'Tropical paradise with stunning temples' },
-  { id: 8, name: 'Dubai', country: 'UAE', continent: 'Asia', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=500&q=80', rating: 4.7, costIndex: '₹₹₹₹', description: 'Futuristic skyline and desert adventures' },
-  { id: 9, name: 'London', country: 'UK', continent: 'Europe', image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&q=80', rating: 4.5, costIndex: '₹₹₹₹₹', description: 'Rich history meets modern culture' },
   { id: 10, name: 'Varanasi', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=500&q=80', rating: 4.6, costIndex: '₹', description: 'The spiritual capital of India' },
   { id: 11, name: 'Udaipur', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=500&q=80', rating: 4.8, costIndex: '₹₹', description: 'City of Lakes with royal palaces' },
-  { id: 12, name: 'Kyoto', country: 'Japan', continent: 'Asia', image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&q=80', rating: 4.9, costIndex: '₹₹₹₹', description: 'Ancient temples and serene gardens' },
+  { id: 13, name: 'Chennai', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=500&q=80', rating: 4.4, costIndex: '₹₹', description: 'Gateway to South India with rich Dravidian culture' },
+  { id: 14, name: 'Pondicherry', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1589718539308-185121b81b5c?w=500&q=80', rating: 4.7, costIndex: '₹₹', description: 'French colonial charm and serene spiritual centers' },
+  { id: 15, name: 'Ooty', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1590050752117-23aae2fc1101?w=500&q=80', rating: 4.6, costIndex: '₹₹', description: 'Queen of Hill Stations with misty tea gardens' },
+  { id: 16, name: 'Munnar', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1593181629936-11c609b8db9b?w=500&q=80', rating: 4.8, costIndex: '₹₹', description: 'Lush green tea plantations and rolling hills' },
+  { id: 17, name: 'Bengaluru', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=500&q=80', rating: 4.5, costIndex: '₹₹₹', description: 'The Garden City and Silicon Valley of India' },
+  { id: 18, name: 'Hyderabad', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1608958435020-e8372dbda000?w=500&q=80', rating: 4.6, costIndex: '₹₹', description: 'City of Pearls and iconic Charminar' },
+  { id: 19, name: 'Mumbai', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?w=500&q=80', rating: 4.7, costIndex: '₹₹₹', description: 'The City of Dreams and Bollywood' },
+  { id: 20, name: 'Delhi', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&q=80', rating: 4.5, costIndex: '₹₹', description: 'The historic and political heart of India' },
+  { id: 21, name: 'Mysore', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1600100397561-43202166e921?w=500&q=80', rating: 4.8, costIndex: '₹₹', description: 'Royal heritage and magnificent palaces' },
+  { id: 22, name: 'Agra', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1548013146-72479768bbaa?w=500&q=80', rating: 4.9, costIndex: '₹₹', description: 'Home to the eternal Taj Mahal' },
+  { id: 23, name: 'Kochi', country: 'India', continent: 'Asia', image: 'https://images.unsplash.com/photo-1589985273514-67ba8f0bc004?w=500&q=80', rating: 4.6, costIndex: '₹₹', description: 'Queen of the Arabian Sea and historic spice port' },
+  { id: 2, name: 'Tokyo', country: 'Japan', continent: 'Asia', image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=500&q=80', rating: 4.9, costIndex: '₹₹₹₹', description: 'A dazzling blend of tradition and modernity' },
+  { id: 3, name: 'Paris', country: 'France', continent: 'Europe', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80', rating: 4.8, costIndex: '₹₹₹₹', description: 'The city of love and lights' },
+  { id: 6, name: 'Santorini', country: 'Greece', continent: 'Europe', image: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=500&q=80', rating: 4.9, costIndex: '₹₹₹₹', description: 'Iconic white-washed cliffs and sunsets' },
 ];
 
 const continents = ['All', 'Asia', 'Europe'];
 
 export default function CitySearchPage() {
   const [search, setSearch] = useState('');
-  const [continent, setContinent] = useState('All');
+  const { trips } = useTrips();
   const [added, setAdded] = useState(new Set());
 
   const filtered = useMemo(() => {
@@ -34,18 +42,52 @@ export default function CitySearchPage() {
     });
   }, [search, continent]);
 
-  const toggleAdd = (id) => {
-    setAdded(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        toast.success('Removed from trip');
-      } else {
-        next.add(id);
-        toast.success('Added to trip');
+  const toggleAdd = async (city) => {
+    if (!trips || trips.length === 0) {
+      toast.error('Please create a trip first from the "Create Trip" page!');
+      return;
+    }
+
+    const latestTrip = trips[0];
+
+    if (added.has(city.id)) {
+      setAdded(prev => {
+        const next = new Set(prev);
+        next.delete(city.id);
+        return next;
+      });
+      toast.success('Removed from your trip');
+    } else {
+      try {
+        console.log('SUPABASE: Adding city stop to trip:', latestTrip.id);
+        
+        const { data, error } = await supabase
+          .from('trip_stops')
+          .insert([{
+            trip_id: latestTrip.id,
+            user_id: String(latestTrip.user_id),
+            city: city.name,
+            country: city.country,
+            day: 1, // Default to Day 1
+            date: latestTrip.start_date,
+            title: `Visit ${city.name}`
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setAdded(prev => {
+          const next = new Set(prev);
+          next.add(city.id);
+          return next;
+        });
+        toast.success(`Added ${city.name} to your trip: ${latestTrip.title}`);
+      } catch (error) {
+        console.error('SUPABASE CITY ERROR:', error);
+        toast.error('Failed to add city to database');
       }
-      return next;
-    });
+    }
   };
 
   return (
@@ -100,7 +142,7 @@ export default function CitySearchPage() {
               </div>
               <div className="p-4">
                 <p className="text-sm text-dark-300 mb-3 line-clamp-2">{city.description}</p>
-                <button onClick={() => toggleAdd(city.id)}
+                <button onClick={() => toggleAdd(city)}
                   className={`w-full py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
                     added.has(city.id)
                       ? 'bg-teal-500/15 text-teal-400 border border-teal-500/20'
