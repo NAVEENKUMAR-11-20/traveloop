@@ -1,0 +1,11 @@
+{
+  "name": "travel-root",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm run dev --prefix ../traveloop/frontend",
+    "install-frontend": "npm install --prefix ../traveloop/frontend"
+  },
+  "dependencies": {
+    "lucide-react": "^1.14.0"
+  }
+}
