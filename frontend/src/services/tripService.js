@@ -13,42 +13,57 @@ export const tripService = {
     }
 
     try {
-      // 1. Fetch main trip data and stops
-      const { data: tripData, error: tripError } = await supabase
+      // 1. Fetch main trips
+      const { data: trips, error: tripsError } = await supabase
         .from('trips')
-        .select(`
-          *,
-          itinerary:trip_stops(
-            *,
-            activities:trip_activities!stop_id(*)
-          )
-        `)
+        .select('*')
         .eq('user_id', String(userId))
         .order('created_at', { ascending: false });
 
-      if (tripError) throw tripError;
+      if (tripsError) throw tripsError;
+      if (!trips || trips.length === 0) return [];
 
-      // 2. Fetch all activities for these trips to ensure we get "global" ones too
-      const tripIds = tripData.map(t => t.id);
-      if (tripIds.length > 0) {
-        const { data: allActs, error: actError } = await supabase
-          .from('trip_activities')
-          .select('*')
-          .in('trip_id', tripIds);
+      const tripIds = trips.map(t => t.id);
+
+      // 2. Fetch all stops for these trips
+      const { data: stops, error: stopsError } = await supabase
+        .from('trip_stops')
+        .select('*')
+        .in('trip_id', tripIds)
+        .order('day', { ascending: true });
+
+      // 3. Fetch all activities for these trips
+      const { data: allActivities, error: activitiesError } = await supabase
+        .from('trip_activities')
+        .select('*')
+        .in('trip_id', tripIds);
+
+      // 4. Assemble the data structure in JS (much more stable than SQL joins)
+      const formattedTrips = trips.map(trip => {
+        // Find activities belonging directly to this trip (global)
+        const tripActivities = (allActivities || []).filter(a => a.trip_id === trip.id);
         
-        if (!actError) {
-          // Map global activities back to trips
-          return tripData.map(trip => ({
-            ...trip,
-            trip_activities: allActs.filter(a => a.trip_id === trip.id)
+        // Find and format stops for this trip
+        const itinerary = (stops || [])
+          .filter(s => s.trip_id === trip.id)
+          .map(stop => ({
+            ...stop,
+            // Link activities to this specific stop
+            activities: tripActivities.filter(a => a.stop_id === stop.id)
           }));
-        }
-      }
 
-      return tripData.map(t => ({ ...t, trip_activities: [] }));
+        return {
+          ...trip,
+          itinerary,
+          trip_activities: tripActivities // All activities for easy access
+        };
+      });
+
+      console.log(`SUPABASE: Successfully assembled ${formattedTrips.length} trips.`);
+      return formattedTrips;
     } catch (err) {
-      console.error('SUPABASE: Error fetching trips:', err);
-      throw new Error(err.message || 'Unknown database error');
+      console.error('SUPABASE: Critical fetch error:', err);
+      throw new Error(err.message || 'Database connection error');
     }
   },
 
