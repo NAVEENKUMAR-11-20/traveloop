@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Star, PlusCircle, MapPin, Globe } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
@@ -43,6 +43,23 @@ export default function CitySearchPage() {
       return matchSearch && matchContinent;
     });
   }, [search, continent]);
+
+  // Sync existing stops from database on load
+  useEffect(() => {
+    if (trips && trips.length > 0) {
+      const latestTrip = trips[0];
+      const existingStops = latestTrip.itinerary || [];
+      const stopCityNames = new Set(existingStops.map(s => s.city));
+      
+      const newAdded = new Set();
+      allCities.forEach(city => {
+        if (stopCityNames.has(city.name)) {
+          newAdded.add(city.id);
+        }
+      });
+      setAdded(newAdded);
+    }
+  }, [trips]);
 
   const toggleAdd = async (city) => {
     if (!trips || trips.length === 0) {
