@@ -5,6 +5,7 @@ import {
   IndianRupee, ClipboardList, BookOpen, User, BarChart3,
   Settings, X, Plane,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -21,6 +22,12 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
+  const { isAdmin } = useAuth();
+
+  const filteredNavItems = navItems.filter(item => {
+    if (item.path === '/admin') return isAdmin;
+    return true;
+  });
 
   const sidebar = (
     <div className="flex flex-col h-full">
@@ -47,7 +54,7 @@ export default function Sidebar({ open, onClose }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {navItems.map(item => {
+        {filteredNavItems.map(item => {
           const isActive = location.pathname === item.path ||
             (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
           return (

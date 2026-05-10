@@ -58,10 +58,13 @@ export function AuthProvider({ children }) {
     toast.success('Logged out successfully');
   };
 
+  const ADMIN_EMAIL = 'naveenkumar11202006@gmail.com';
+
   const value = {
     user,
     loading,
     isAuthenticated: !!user,
+    isAdmin: user?.email === ADMIN_EMAIL,
     login,
     handleGoogleLogin,
     logout

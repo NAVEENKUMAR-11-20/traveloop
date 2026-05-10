@@ -50,6 +50,14 @@ function PublicRoute({ children }) {
   return children;
 }
 
+function AdminRoute({ children }) {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  if (loading) return <LoadingSpinner />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
@@ -75,7 +83,9 @@ function AppRoutes() {
           <Route path="/journal" element={<JournalPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<ProfilePage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          
+          {/* Admin Only */}
+          <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         </Route>
 
         {/* Fallback */}
