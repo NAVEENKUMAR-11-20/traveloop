@@ -57,7 +57,7 @@ export function TripProvider({ children }) {
       setTrips(data.length > 0 ? data : (isSupabaseConfigured() ? [] : DEMO_TRIPS));
     } catch (error) {
       console.error('Error fetching trips:', error);
-      toast.error('Failed to load trips');
+      toast.error(`Failed to load trips: ${error.message}`);
     } finally {
       setLoading(false);
     }

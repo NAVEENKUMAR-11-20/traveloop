@@ -23,18 +23,29 @@ export const tripService = {
           )
         `)
         .eq('user_id', String(userId))
-        .order('start_date', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('SUPABASE FETCH ERROR:', error);
-        throw error;
+        // Try a simpler fetch to see if it's a relational error
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('trips')
+          .select('*')
+          .eq('user_id', String(userId));
+        
+        if (simpleError) {
+          throw new Error(`Database error: ${simpleError.message}`);
+        }
+        
+        console.log('SUPABASE: Falling back to simple trip data (itinerary join failed)');
+        return simpleData.map(t => ({ ...t, itinerary: [] }));
       }
 
       console.log(`SUPABASE: Found ${data?.length || 0} trips.`);
       return data;
     } catch (err) {
       console.error('SUPABASE: Error fetching trips:', err);
-      throw err;
+      throw new Error(err.message || 'Unknown database error');
     }
   },
 
