@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Star, PlusCircle, MapPin, Globe } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
 
@@ -32,7 +33,8 @@ const continents = ['All', 'Asia', 'Europe'];
 export default function CitySearchPage() {
   const [search, setSearch] = useState('');
   const [continent, setContinent] = useState('All');
-  const { trips } = useTrips();
+  const { trips, addTrip, refreshTrips } = useTrips();
+  const { user } = useAuth();
   const [added, setAdded] = useState(new Set());
 
   const filtered = useMemo(() => {
@@ -44,16 +46,14 @@ export default function CitySearchPage() {
     });
   }, [search, continent]);
 
-  // Sync existing stops from database on load
+  // Sync existing trips from database on load
   useEffect(() => {
     if (trips && trips.length > 0) {
-      const latestTrip = trips[0];
-      const existingStops = latestTrip.itinerary || [];
-      const stopCityNames = new Set(existingStops.map(s => s.city));
+      const tripDestinations = new Set(trips.map(t => t.destination.toLowerCase()));
       
       const newAdded = new Set();
       allCities.forEach(city => {
-        if (stopCityNames.has(city.name)) {
+        if (tripDestinations.has(city.name.toLowerCase())) {
           newAdded.add(city.id);
         }
       });
@@ -62,50 +62,46 @@ export default function CitySearchPage() {
   }, [trips]);
 
   const toggleAdd = async (city) => {
-    if (!trips || trips.length === 0) {
-      toast.error('Please create a trip first from the "Create Trip" page!');
+    if (added.has(city.id)) {
+      toast.error('This city is already in your My Trips dashboard!');
       return;
     }
 
-    const latestTrip = trips[0];
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() + 30); // Default 30 days from now
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 7); // Default 7 day trip
 
-    if (added.has(city.id)) {
-      setAdded(prev => {
-        const next = new Set(prev);
-        next.delete(city.id);
-        return next;
-      });
-      toast.success('Removed from your trip');
-    } else {
-      try {
-        console.log('SUPABASE: Adding city stop to trip:', latestTrip.id);
-        
-        const { data, error } = await supabase
-          .from('trip_stops')
-          .insert([{
-            trip_id: latestTrip.id,
-            user_id: String(latestTrip.user_id),
-            city: city.name,
-            country: city.country,
-            day: 1, // Default to Day 1
-            date: latestTrip.start_date,
-            title: `Visit ${city.name}`
-          }])
-          .select()
-          .single();
+      const newTripData = {
+        title: `${city.name} Trip`,
+        destination: city.name,
+        description: city.description,
+        cover_image: city.image,
+        budget: 50000, // Default estimated budget
+        status: 'planning',
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        user_id: user?.id
+      };
 
-        if (error) throw error;
-
+      console.log('SUPABASE: Creating new trip from city search:', newTripData);
+      
+      const result = await addTrip(newTripData);
+      
+      if (result) {
+        console.log('SUPABASE: New trip created successfully:', result);
         setAdded(prev => {
           const next = new Set(prev);
           next.add(city.id);
           return next;
         });
-        toast.success(`Added ${city.name} to your trip: ${latestTrip.title}`);
-      } catch (error) {
-        console.error('SUPABASE CITY ERROR:', error);
-        toast.error('Failed to add city to database');
+        toast.success(`${city.name} added to My Trips`);
+        await refreshTrips();
       }
+    } catch (error) {
+      console.error('SUPABASE CREATE TRIP ERROR:', error);
+      toast.error(`Failed to add city trip: ${error.message}`);
     }
   };
 
@@ -171,7 +167,7 @@ export default function CitySearchPage() {
                       : 'bg-accent-500/10 text-accent-400 hover:bg-accent-500/20 border border-accent-500/20'
                   }`}>
                   <PlusCircle className="w-4 h-4" />
-                  {added.has(city.id) ? 'Added to Trip' : 'Add to Trip'}
+                  {added.has(city.id) ? 'Added' : 'Add to Trip'}
                 </button>
               </div>
             </div>
