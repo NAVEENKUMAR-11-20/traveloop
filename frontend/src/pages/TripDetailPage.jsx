@@ -98,15 +98,20 @@ export default function TripDetailPage() {
     toast.success('Activity removed');
   };
 
-  const handleAddDay = () => {
+  const handleAddDay = async () => {
     if (!newDayTitle) return;
-    const dayNum = trip.itinerary.length + 1;
-    const date = new Date(parseISO(trip.start_date));
+    const dayNum = itinerary.length + 1;
+    const date = new Date(safeParseDate(trip.start_date));
     date.setDate(date.getDate() + dayNum - 1);
-    updateItinerary(trip.id, [...trip.itinerary, { day: dayNum, date: format(date, 'yyyy-MM-dd'), title: newDayTitle, activities: [] }]);
+    
+    await addItineraryDay(trip.id, { 
+      day: dayNum, 
+      date: format(date, 'yyyy-MM-dd'), 
+      title: newDayTitle 
+    });
+    
     setNewDayTitle('');
     setShowAddDay(false);
-    toast.success('Day added');
   };
 
   const handleAddPack = (e) => {
