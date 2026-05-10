@@ -13,37 +13,39 @@ export const tripService = {
     }
 
     try {
-      const { data, error } = await supabase
+      // 1. Fetch main trip data and stops
+      const { data: tripData, error: tripError } = await supabase
         .from('trips')
         .select(`
           *,
           itinerary:trip_stops(
             *,
             activities:trip_activities!stop_id(*)
-          ),
-          trip_activities:trip_activities!trip_id(*)
+          )
         `)
         .eq('user_id', String(userId))
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('SUPABASE FETCH ERROR:', error);
-        // Try a simpler fetch to see if it's a relational error
-        const { data: simpleData, error: simpleError } = await supabase
-          .from('trips')
+      if (tripError) throw tripError;
+
+      // 2. Fetch all activities for these trips to ensure we get "global" ones too
+      const tripIds = tripData.map(t => t.id);
+      if (tripIds.length > 0) {
+        const { data: allActs, error: actError } = await supabase
+          .from('trip_activities')
           .select('*')
-          .eq('user_id', String(userId));
+          .in('trip_id', tripIds);
         
-        if (simpleError) {
-          throw new Error(`Database error: ${simpleError.message}`);
+        if (!actError) {
+          // Map global activities back to trips
+          return tripData.map(trip => ({
+            ...trip,
+            trip_activities: allActs.filter(a => a.trip_id === trip.id)
+          }));
         }
-        
-        console.log('SUPABASE: Falling back to simple trip data (itinerary join failed)');
-        return simpleData.map(t => ({ ...t, itinerary: [] }));
       }
 
-      console.log(`SUPABASE: Found ${data?.length || 0} trips.`);
-      return data;
+      return tripData.map(t => ({ ...t, trip_activities: [] }));
     } catch (err) {
       console.error('SUPABASE: Error fetching trips:', err);
       throw new Error(err.message || 'Unknown database error');
