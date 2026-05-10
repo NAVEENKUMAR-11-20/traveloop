@@ -1,10 +1,17 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
+import { tripService } from '../services/tripService';
+import { checklistService } from '../services/checklistService';
+import { notesService } from '../services/notesService';
+import { budgetService } from '../services/budgetService';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
+import toast from 'react-hot-toast';
 
 const TripContext = createContext(null);
 
 const DEMO_TRIPS = [
   {
-    id: 1,
+    id: 'demo-1',
     title: 'Exploring Tokyo',
     description: 'A week-long adventure through the vibrant streets of Tokyo, from ancient temples to futuristic tech districts.',
     destination: 'Tokyo, Japan',
@@ -21,221 +28,189 @@ const DEMO_TRIPS = [
         { time: '16:00', name: 'Shibuya Crossing & Hachiko', cost: 0, type: 'sightseeing' },
         { time: '19:00', name: 'Dinner at Ichiran Ramen', cost: 1200, type: 'food' },
       ]},
-      { day: 2, date: '2026-06-16', title: 'Temples & Gardens', activities: [
-        { time: '09:00', name: 'Meiji Shrine', cost: 0, type: 'sightseeing' },
-        { time: '12:00', name: 'Harajuku Street Food', cost: 1600, type: 'food' },
-        { time: '15:00', name: 'Shinjuku Gyoen Garden', cost: 400, type: 'sightseeing' },
-      ]},
-      { day: 3, date: '2026-06-17', title: 'Akihabara & Tech', activities: [
-        { time: '10:00', name: 'Akihabara Electric Town', cost: 4000, type: 'shopping' },
-        { time: '14:00', name: 'TeamLab Borderless', cost: 2400, type: 'entertainment' },
-      ]},
     ],
     packing: [
       { id: 1, item: 'Passport', category: 'documents', checked: true },
       { id: 2, item: 'Travel adapter', category: 'electronics', checked: true },
-      { id: 3, item: 'Comfortable walking shoes', category: 'clothing', checked: false },
-      { id: 4, item: 'Sunscreen', category: 'toiletries', checked: false },
-      { id: 5, item: 'Rain jacket', category: 'clothing', checked: false },
-      { id: 6, item: 'Paracetamol', category: 'medicines', checked: false },
     ],
     journal: [
-      { id: 1, date: '2026-06-15', title: 'First impressions', content: 'Tokyo is absolutely breathtaking. The energy here is unlike anything I\'ve experienced.' },
+      { id: 1, date: '2026-06-15', title: 'First impressions', content: 'Tokyo is absolutely breathtaking.' },
     ],
-  },
-  {
-    id: 2,
-    title: 'Rajasthan Heritage Tour',
-    description: 'Discover the royal palaces, desert forts, and vibrant culture of Rajasthan.',
-    destination: 'Jaipur, India',
-    start_date: '2026-07-10',
-    end_date: '2026-07-16',
-    cover_image: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?w=800&q=80',
-    budget: 65000,
-    spent: 12000,
-    status: 'upcoming',
-    cities: ['Jaipur', 'Udaipur', 'Jodhpur'],
-    itinerary: [
-      { day: 1, date: '2026-07-10', title: 'Arrival & Hawa Mahal', activities: [
-        { time: '15:00', name: 'Check in at Heritage Hotel', cost: 0, type: 'accommodation' },
-        { time: '17:00', name: 'Hawa Mahal visit', cost: 200, type: 'sightseeing' },
-        { time: '20:00', name: 'Dinner at Chokhi Dhani', cost: 1500, type: 'food' },
-      ]},
-    ],
-    packing: [
-      { id: 1, item: 'Aadhar Card', category: 'documents', checked: false },
-      { id: 2, item: 'Cotton clothes', category: 'clothing', checked: false },
-    ],
-    journal: [],
-  },
-  {
-    id: 3,
-    title: 'Bali Retreat',
-    description: 'A wellness and adventure retreat in the tropical paradise of Bali.',
-    destination: 'Bali, Indonesia',
-    start_date: '2026-08-01',
-    end_date: '2026-08-10',
-    cover_image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
-    budget: 220000,
-    spent: 0,
-    status: 'planning',
-    cities: ['Ubud', 'Seminyak', 'Nusa Penida'],
-    itinerary: [],
-    packing: [],
-    journal: [],
-  },
-  {
-    id: 4,
-    title: 'Manali Weekend',
-    description: 'A quick weekend getaway to the snowy mountains of Himachal.',
-    destination: 'Manali, India',
-    start_date: '2026-05-01',
-    end_date: '2026-05-03',
-    cover_image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=800&q=80',
-    budget: 25000,
-    spent: 23500,
-    status: 'completed',
-    cities: ['Manali'],
-    itinerary: [
-      { day: 1, date: '2026-05-01', title: 'Arrival & Hadimba Temple', activities: [
-        { time: '10:00', name: 'Hadimba Temple', cost: 0, type: 'sightseeing' },
-        { time: '13:00', name: 'Lunch at Johnson Cafe', cost: 1200, type: 'food' },
-        { time: '15:00', name: 'Solang Valley', cost: 2500, type: 'sightseeing' },
-        { time: '20:00', name: 'Mall Road walk', cost: 800, type: 'shopping' },
-      ]},
-    ],
-    packing: [],
-    journal: [
-      { id: 1, date: '2026-05-01', title: 'Mountain magic', content: 'The snow-capped peaks of Manali are mesmerizing. Best weekend trip ever!' },
-    ],
-  },
+  }
 ];
 
 export function TripProvider({ children }) {
-  const [trips, setTrips] = useState(() => {
-    const saved = localStorage.getItem('traveloop_trips');
-    return saved ? JSON.parse(saved) : DEMO_TRIPS;
-  });
+  const { user } = useAuth();
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTrips = useCallback(async () => {
+    if (!user) {
+      setTrips([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await tripService.getTrips(user.id);
+      setTrips(data.length > 0 ? data : (isSupabaseConfigured() ? [] : DEMO_TRIPS));
+    } catch (error) {
+      console.error('Error fetching trips:', error);
+      toast.error('Failed to load trips');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('traveloop_trips', JSON.stringify(trips));
-  }, [trips]);
+    fetchTrips();
+  }, [fetchTrips]);
 
-  const addTrip = (trip) => {
-    const newTrip = {
-      ...trip,
-      id: Date.now(),
-      spent: 0,
-      status: 'planning',
-      cities: [],
-      itinerary: [],
-      packing: [],
-      journal: [],
-    };
-    setTrips(prev => [newTrip, ...prev]);
-    return newTrip;
+  const addTrip = async (tripData) => {
+    try {
+      const newTrip = await tripService.createTrip(tripData, user?.id);
+      setTrips(prev => [newTrip, ...prev]);
+      toast.success('Trip created successfully!');
+      return newTrip;
+    } catch (error) {
+      toast.error('Failed to create trip');
+      throw error;
+    }
   };
 
-  const updateTrip = (id, updates) => {
-    setTrips(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  const updateTrip = async (id, updates) => {
+    try {
+      const updated = await tripService.updateTrip(id, updates);
+      setTrips(prev => prev.map(t => t.id === id ? { ...t, ...updated } : t));
+      return updated;
+    } catch (error) {
+      toast.error('Failed to update trip');
+      throw error;
+    }
   };
 
-  const deleteTrip = (id) => {
-    setTrips(prev => prev.filter(t => t.id !== id));
+  const deleteTrip = async (id) => {
+    try {
+      await tripService.deleteTrip(id);
+      setTrips(prev => prev.filter(t => t.id !== id));
+      toast.success('Trip deleted');
+    } catch (error) {
+      toast.error('Failed to delete trip');
+    }
   };
 
-  const getTrip = (id) => trips.find(t => t.id === Number(id));
+  const getTrip = (id) => trips.find(t => String(t.id) === String(id));
 
-  const addItineraryDay = (tripId, day) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, itinerary: [...t.itinerary, day] };
-      }
-      return t;
-    }));
+  // Itinerary
+  const addItineraryDay = async (tripId, day) => {
+    const trip = getTrip(tripId);
+    const newItinerary = [...(trip.itinerary || []), day];
+    await updateTrip(tripId, { itinerary: newItinerary });
   };
 
-  const updateItinerary = (tripId, itinerary) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, itinerary };
-      }
-      return t;
-    }));
+  const updateItinerary = async (tripId, itinerary) => {
+    await updateTrip(tripId, { itinerary });
   };
 
-  const addPackingItem = (tripId, item) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, packing: [...t.packing, { id: Date.now(), ...item }] };
-      }
-      return t;
-    }));
+  // Packing List
+  const addPackingItem = async (tripId, item) => {
+    try {
+      const newItem = await checklistService.addItem(tripId, { ...item, checked: false });
+      setTrips(prev => prev.map(t => {
+        if (t.id === tripId) {
+          return { ...t, packing: [...(t.packing || []), newItem] };
+        }
+        return t;
+      }));
+    } catch (error) {
+      toast.error('Failed to add item');
+    }
   };
 
-  const togglePackingItem = (tripId, itemId) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return {
-          ...t,
-          packing: t.packing.map(p => p.id === itemId ? { ...p, checked: !p.checked } : p),
-        };
-      }
-      return t;
-    }));
+  const togglePackingItem = async (tripId, itemId) => {
+    const trip = getTrip(tripId);
+    const item = trip.packing.find(p => p.id === itemId);
+    try {
+      const updated = await checklistService.updateItem(itemId, { checked: !item.checked });
+      setTrips(prev => prev.map(t => {
+        if (t.id === tripId) {
+          return {
+            ...t,
+            packing: t.packing.map(p => p.id === itemId ? { ...p, ...updated } : p),
+          };
+        }
+        return t;
+      }));
+    } catch (error) {
+      toast.error('Failed to update item');
+    }
   };
 
-  const removePackingItem = (tripId, itemId) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, packing: t.packing.filter(p => p.id !== itemId) };
-      }
-      return t;
-    }));
+  const removePackingItem = async (tripId, itemId) => {
+    try {
+      await checklistService.deleteItem(itemId);
+      setTrips(prev => prev.map(t => {
+        if (t.id === tripId) {
+          return { ...t, packing: t.packing.filter(p => p.id !== itemId) };
+        }
+        return t;
+      }));
+    } catch (error) {
+      toast.error('Failed to remove item');
+    }
   };
 
-  const resetChecklist = (tripId) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, packing: t.packing.map(p => ({ ...p, checked: false })) };
-      }
-      return t;
-    }));
+  // Journal
+  const addJournalEntry = async (tripId, entry) => {
+    try {
+      const newEntry = await notesService.addNote(tripId, entry);
+      setTrips(prev => prev.map(t => {
+        if (t.id === tripId) {
+          return { ...t, journal: [...(t.journal || []), newEntry] };
+        }
+        return t;
+      }));
+    } catch (error) {
+      toast.error('Failed to add journal entry');
+    }
   };
 
-  const addJournalEntry = (tripId, entry) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, journal: [...t.journal, { id: Date.now(), ...entry }] };
-      }
-      return t;
-    }));
+  const updateJournalEntry = async (tripId, entryId, updates) => {
+    try {
+      const updated = await notesService.updateNote(entryId, updates);
+      setTrips(prev => prev.map(t => {
+        if (t.id === tripId) {
+          return { ...t, journal: t.journal.map(j => j.id === entryId ? { ...j, ...updated } : j) };
+        }
+        return t;
+      }));
+    } catch (error) {
+      toast.error('Failed to update entry');
+    }
   };
 
-  const updateJournalEntry = (tripId, entryId, updates) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, journal: t.journal.map(j => j.id === entryId ? { ...j, ...updates } : j) };
-      }
-      return t;
-    }));
-  };
-
-  const deleteJournalEntry = (tripId, entryId) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === Number(tripId)) {
-        return { ...t, journal: t.journal.filter(j => j.id !== entryId) };
-      }
-      return t;
-    }));
+  const deleteJournalEntry = async (tripId, entryId) => {
+    try {
+      await notesService.deleteNote(entryId);
+      setTrips(prev => prev.map(t => {
+        if (t.id === tripId) {
+          return { ...t, journal: t.journal.filter(j => j.id !== entryId) };
+        }
+        return t;
+      }));
+    } catch (error) {
+      toast.error('Failed to delete entry');
+    }
   };
 
   return (
     <TripContext.Provider value={{
-      trips, addTrip, updateTrip, deleteTrip, getTrip,
+      trips, loading, addTrip, updateTrip, deleteTrip, getTrip,
       addItineraryDay, updateItinerary,
-      addPackingItem, togglePackingItem, removePackingItem, resetChecklist,
+      addPackingItem, togglePackingItem, removePackingItem,
       addJournalEntry, updateJournalEntry, deleteJournalEntry,
+      refreshTrips: fetchTrips
     }}>
       {children}
     </TripContext.Provider>
