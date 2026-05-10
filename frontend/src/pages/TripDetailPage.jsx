@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTrips } from '../context/TripContext';
@@ -8,6 +8,8 @@ import {
   ClipboardList, BookOpen, ArrowLeft, Download, Check, X, Map, Pencil, Compass
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const tabs = [
   { id: 'itinerary', label: 'Itinerary', icon: Map },
@@ -35,6 +37,7 @@ export default function TripDetailPage() {
   } = useTrips();
   const trip = getTrip(id);
   const [activeTab, setActiveTab] = useState('itinerary');
+  const tripRef = useRef(null);
 
   if (loading) {
     return (
@@ -139,8 +142,40 @@ export default function TripDetailPage() {
     toast.success('Link copied!');
   };
 
+  const handleExportPDF = async () => {
+    if (!tripRef.current) return;
+    
+    const toastId = toast.loading('Generating your travel PDF...');
+    try {
+      const canvas = await html2canvas(tripRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0D0F18',
+        logging: false,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Traveloop-${trip.title.replace(/\s+/g, '-')}.pdf`);
+      toast.success('PDF downloaded!', { id: toastId });
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      toast.error('Failed to generate PDF', { id: toastId });
+    }
+  };
+
   return (
-    <div>
+    <div ref={tripRef}>
       <Link to="/trips" className="inline-flex items-center gap-1 text-sm text-dark-400 hover:text-accent-400 transition-colors mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to trips
       </Link>
@@ -181,7 +216,7 @@ export default function TripDetailPage() {
       {/* Actions */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button onClick={handleShare} className="btn-secondary text-sm flex items-center gap-2"><Share2 className="w-4 h-4" /> Share</button>
-        <button className="btn-secondary text-sm flex items-center gap-2"><Download className="w-4 h-4" /> Export PDF</button>
+        <button onClick={handleExportPDF} className="btn-secondary text-sm flex items-center gap-2"><Download className="w-4 h-4" /> Export PDF</button>
       </div>
 
       {/* Tabs */}
