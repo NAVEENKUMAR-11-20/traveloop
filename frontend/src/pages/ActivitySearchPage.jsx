@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Clock, IndianRupee, PlusCircle, Compass, X } from 'lucide-react';
+import { useTrips } from '../context/TripContext';
 import toast from 'react-hot-toast';
 
 const allActivities = [
@@ -24,6 +25,7 @@ export default function ActivitySearchPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [added, setAdded] = useState(new Set());
+  const { addTrip, trips } = useTrips();
 
   const filtered = useMemo(() => {
     return allActivities.filter(a => {
@@ -33,18 +35,57 @@ export default function ActivitySearchPage() {
     });
   }, [search, typeFilter]);
 
-  const toggleAdd = (id) => {
-    setAdded(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        toast.success('Activity removed');
-      } else {
-        next.add(id);
-        toast.success('Activity added');
+  const toggleAdd = async (activity) => {
+    if (added.has(activity.id)) {
+      setAdded(prev => {
+        const next = new Set(prev);
+        next.delete(activity.id);
+        return next;
+      });
+      toast.success('Activity removed');
+    } else {
+      try {
+        // Create a new trip plan from this activity
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(startDate.getDate() + 1);
+
+        await addTrip({
+          title: `Trip to ${activity.name}`,
+          destination: activity.name,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          description: activity.description,
+          budget: activity.cost,
+          cover_image: activity.image,
+          status: 'planning',
+          spent: 0,
+          itinerary: [
+            {
+              day: 1,
+              date: startDate.toISOString().split('T')[0],
+              title: 'Activity Day',
+              activities: [
+                {
+                  time: '10:00',
+                  name: activity.name,
+                  cost: activity.cost,
+                  type: activity.type
+                }
+              ]
+            }
+          ]
+        });
+
+        setAdded(prev => {
+          const next = new Set(prev);
+          next.add(activity.id);
+          return next;
+        });
+      } catch (error) {
+        console.error('Failed to save activity as trip:', error);
       }
-      return next;
-    });
+    }
   };
 
   return (
@@ -94,7 +135,7 @@ export default function ActivitySearchPage() {
                   <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{act.duration}</span>
                   <span className="flex items-center gap-1"><IndianRupee className="w-3.5 h-3.5" />₹{act.cost.toLocaleString('en-IN')}</span>
                 </div>
-                <button onClick={() => toggleAdd(act.id)}
+                <button onClick={() => toggleAdd(act)}
                   className={`w-full py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
                     added.has(act.id)
                       ? 'bg-teal-500/15 text-teal-400 border border-teal-500/20'
