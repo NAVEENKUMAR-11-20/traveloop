@@ -65,9 +65,21 @@ export default function TripDetailPage() {
     );
   }
 
-  const totalDays = differenceInDays(parseISO(trip.end_date), parseISO(trip.start_date)) + 1;
-  const itineraryCost = trip.itinerary.reduce((s, d) => s + d.activities.reduce((a, act) => a + (act.cost || 0), 0), 0);
-  const packProgress = trip.packing.length > 0 ? Math.round((trip.packing.filter(p => p.checked).length / trip.packing.length) * 100) : 0;
+  const itinerary = trip.itinerary || [];
+  const packing = trip.packing || [];
+  const journal = trip.journal || [];
+
+  const safeParseDate = (d) => {
+    try {
+      return d ? parseISO(d) : new Date();
+    } catch (e) {
+      return new Date();
+    }
+  };
+
+  const totalDays = differenceInDays(safeParseDate(trip.end_date), safeParseDate(trip.start_date)) + 1;
+  const itineraryCost = itinerary.reduce((s, d) => s + (d.activities || []).reduce((a, act) => a + (act.cost || 0), 0), 0);
+  const packProgress = packing.length > 0 ? Math.round((packing.filter(p => p.checked).length / packing.length) * 100) : 0;
 
   const handleAddAct = (dayIdx) => {
     if (!newAct.name) return;
@@ -135,7 +147,9 @@ export default function TripDetailPage() {
             <div className="flex flex-wrap items-center gap-3 text-white/60 text-xs sm:text-sm">
               <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{trip.destination}</span>
               <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />
-                {format(parseISO(trip.start_date), 'MMM d')} – {format(parseISO(trip.end_date), 'MMM d, yyyy')}
+                {trip.start_date && trip.end_date ? (
+                  <>{format(safeParseDate(trip.start_date), 'MMM d')} – {format(safeParseDate(trip.end_date), 'MMM d, yyyy')}</>
+                ) : 'Dates TBD'}
               </span>
               <span>{totalDays} days</span>
             </div>
@@ -143,9 +157,9 @@ export default function TripDetailPage() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-white/5">
           {[
-            { label: 'Budget', value: `₹${trip.budget.toLocaleString('en-IN')}` },
-            { label: 'Spent', value: `₹${trip.spent.toLocaleString('en-IN')}` },
-            { label: 'Activities', value: trip.itinerary.reduce((s, d) => s + d.activities.length, 0) },
+            { label: 'Budget', value: `₹${(trip.budget || 0).toLocaleString('en-IN')}` },
+            { label: 'Spent', value: `₹${(trip.spent || 0).toLocaleString('en-IN')}` },
+            { label: 'Activities', value: itinerary.reduce((s, d) => s + (d.activities || []).length, 0) },
             { label: 'Packing', value: `${packProgress}%` },
           ].map(s => (
             <div key={s.label} className="p-3 sm:p-4 text-center">
@@ -188,12 +202,12 @@ export default function TripDetailPage() {
         {activeTab === 'itinerary' && (
           <motion.div key="it" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="space-y-4">
-              {trip.itinerary.map((day, dayIdx) => (
+              {itinerary.map((day, dayIdx) => (
                 <div key={dayIdx} className="card p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="font-bold text-white">Day {day.day}: {day.title}</h3>
-                      <p className="text-xs text-dark-400">{format(parseISO(day.date), 'EEEE, MMM d, yyyy')}</p>
+                      <p className="text-xs text-dark-400">{day.date ? format(safeParseDate(day.date), 'EEEE, MMM d, yyyy') : 'Date TBD'}</p>
                     </div>
                     <span className="text-xs text-dark-400 bg-dark-700 px-2 py-1 rounded-lg">₹{day.activities.reduce((s, a) => s + (a.cost || 0), 0).toLocaleString('en-IN')}</span>
                   </div>
@@ -276,7 +290,7 @@ export default function TripDetailPage() {
               <button type="submit" className="btn-primary text-sm whitespace-nowrap">Add Item</button>
             </form>
             {packingCategories.map(cat => {
-              const items = trip.packing.filter(p => p.category === cat);
+              const items = packing.filter(p => p.category === cat);
               if (!items.length) return null;
               return (
                 <div key={cat} className="mb-4">
@@ -320,19 +334,19 @@ export default function TripDetailPage() {
                 </div>
               </form>
             )}
-            {trip.journal.length === 0 ? (
+            {journal.length === 0 ? (
               <div className="card p-8 text-center">
                 <BookOpen className="w-12 h-12 text-dark-500 mx-auto mb-3" />
                 <p className="text-dark-400 text-sm">No journal entries yet.</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {trip.journal.map(entry => (
+                {journal.map(entry => (
                   <div key={entry.id} className="card p-4 group">
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <h3 className="font-semibold text-white">{entry.title}</h3>
-                        <p className="text-xs text-dark-400">{format(parseISO(entry.date), 'EEEE, MMM d, yyyy')}</p>
+                        <p className="text-xs text-dark-400">{entry.date ? format(safeParseDate(entry.date), 'EEEE, MMM d, yyyy') : 'Date TBD'}</p>
                       </div>
                       <button onClick={() => deleteJournalEntry(trip.id, entry.id)}
                         className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-dark-500 hover:text-red-400 transition-all">

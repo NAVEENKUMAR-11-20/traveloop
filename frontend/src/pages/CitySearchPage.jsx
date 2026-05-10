@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Search, Star, PlusCircle, MapPin, Globe } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
 import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
@@ -30,6 +31,7 @@ const continents = ['All', 'Asia', 'Europe'];
 
 export default function CitySearchPage() {
   const [search, setSearch] = useState('');
+  const [continent, setContinent] = useState('All');
   const { trips } = useTrips();
   const [added, setAdded] = useState(new Set());
 
