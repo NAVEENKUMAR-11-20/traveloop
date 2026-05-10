@@ -20,7 +20,8 @@ export const tripService = {
           itinerary:trip_stops(
             *,
             activities:trip_activities(*)
-          )
+          ),
+          activities:trip_activities(*)
         `)
         .eq('user_id', String(userId))
         .order('created_at', { ascending: false });

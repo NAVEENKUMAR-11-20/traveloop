@@ -5,12 +5,13 @@ import { useTrips } from '../context/TripContext';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import {
   Calendar, IndianRupee, MapPin, Clock, PlusCircle, Trash2, Share2,
-  ClipboardList, BookOpen, ArrowLeft, Download, Check, X, Map, Pencil,
+  ClipboardList, BookOpen, ArrowLeft, Download, Check, X, Map, Pencil, Compass
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const tabs = [
   { id: 'itinerary', label: 'Itinerary', icon: Map },
+  { id: 'activities', label: 'Activities', icon: Compass },
   { id: 'packing', label: 'Packing', icon: ClipboardList },
   { id: 'journal', label: 'Journal', icon: BookOpen },
 ];
@@ -68,6 +69,8 @@ export default function TripDetailPage() {
   const itinerary = trip.itinerary || [];
   const packing = trip.packing || [];
   const journal = trip.journal || [];
+  const allActivities = trip.activities || [];
+  const globalActivities = allActivities.filter(a => !a.stop_id);
 
   const safeParseDate = (d) => {
     try {
@@ -164,7 +167,7 @@ export default function TripDetailPage() {
           {[
             { label: 'Budget', value: `₹${(trip.budget || 0).toLocaleString('en-IN')}` },
             { label: 'Spent', value: `₹${(trip.spent || 0).toLocaleString('en-IN')}` },
-            { label: 'Activities', value: itinerary.reduce((s, d) => s + (d.activities || []).length, 0) },
+            { label: 'Activities', value: allActivities.length },
             { label: 'Packing', value: `${packProgress}%` },
           ].map(s => (
             <div key={s.label} className="p-3 sm:p-4 text-center">
@@ -359,6 +362,48 @@ export default function TripDetailPage() {
                       </button>
                     </div>
                     <p className="text-sm text-dark-300 leading-relaxed">{entry.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+        {activeTab === 'activities' && (
+          <motion.div key="act" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-semibold text-white">Trip Activities</h2>
+              <Link to="/activities" className="btn-primary text-xs flex items-center gap-2">
+                <PlusCircle className="w-3.5 h-3.5" /> Find More
+              </Link>
+            </div>
+            
+            {globalActivities.length === 0 ? (
+              <div className="card p-8 text-center">
+                <Compass className="w-12 h-12 text-dark-500 mx-auto mb-3" />
+                <p className="text-dark-400 text-sm">No activities added yet.</p>
+                <Link to="/activities" className="text-accent-400 text-xs mt-2 inline-block">Explore things to do</Link>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {globalActivities.map(act => (
+                  <div key={act.id} className="card overflow-hidden group flex flex-col">
+                    <div className="relative aspect-[16/9] overflow-hidden">
+                      <img src={act.image_url || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=400&q=80'} 
+                           alt={act.activity_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <span className="absolute top-2 left-2 badge bg-black/30 backdrop-blur-sm text-white capitalize border border-white/10 text-[10px]">
+                        {act.category}
+                      </span>
+                    </div>
+                    <div className="p-3 flex-1 flex flex-col">
+                      <div className="flex items-start justify-between mb-1">
+                        <h3 className="font-semibold text-white text-sm">{act.activity_name}</h3>
+                        <span className="text-xs font-bold text-accent-400">₹{Number(act.cost).toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-dark-400 mb-2">
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{act.duration}</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

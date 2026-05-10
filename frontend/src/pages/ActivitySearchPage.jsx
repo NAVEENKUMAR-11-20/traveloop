@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Clock, IndianRupee, PlusCircle, Compass, X } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
@@ -35,6 +35,26 @@ export default function ActivitySearchPage() {
       return matchSearch && matchType;
     });
   }, [search, typeFilter]);
+
+  // Sync existing activities from database on load
+  useEffect(() => {
+    if (trips && trips.length > 0) {
+      const latestTrip = trips[0];
+      // Check both stop-based and trip-based activities
+      const activities = latestTrip.activities || [];
+      const stopActivities = (latestTrip.itinerary || []).flatMap(s => s.activities || []);
+      const allTripActivities = [...activities, ...stopActivities];
+      
+      const actNames = new Set(allTripActivities.map(a => a.activity_name));
+      const newAdded = new Set();
+      allActivities.forEach(act => {
+        if (actNames.has(act.name)) {
+          newAdded.add(act.id);
+        }
+      });
+      setAdded(newAdded);
+    }
+  }, [trips]);
 
   const toggleAdd = async (activity) => {
     if (!trips || trips.length === 0) {
