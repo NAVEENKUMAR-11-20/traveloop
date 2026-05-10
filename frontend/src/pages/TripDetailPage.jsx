@@ -120,6 +120,9 @@ export default function TripDetailPage() {
     setShowAddDay(false);
   };
 
+  console.log('SUPABASE: Current trip data in Detail:', trip);
+  console.log('SUPABASE: Current activities count:', allActivities.length);
+
   const handleAddPack = (e) => {
     e.preventDefault();
     if (!newPackItem) return;
@@ -407,7 +410,7 @@ export default function TripDetailPage() {
           <motion.div key="act" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-white">Trip Activities</h2>
-              <Link to="/activities" className="btn-primary text-xs flex items-center gap-2">
+              <Link to={`/activities?tripId=${trip.id}`} className="btn-primary text-xs flex items-center gap-2">
                 <PlusCircle className="w-3.5 h-3.5" /> Find More
               </Link>
             </div>
@@ -416,7 +419,7 @@ export default function TripDetailPage() {
               <div className="card p-8 text-center">
                 <Compass className="w-12 h-12 text-dark-500 mx-auto mb-3" />
                 <p className="text-dark-400 text-sm">No activities added yet.</p>
-                <Link to="/activities" className="text-accent-400 text-xs mt-2 inline-block">Explore things to do</Link>
+                <Link to={`/activities?tripId=${trip.id}`} className="text-accent-400 text-xs mt-2 inline-block">Explore things to do</Link>
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 gap-4">

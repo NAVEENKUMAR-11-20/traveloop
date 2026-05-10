@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Clock, IndianRupee, PlusCircle, Compass, X } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
@@ -23,6 +24,8 @@ const allActivities = [
 const types = ['All', 'adventure', 'culture', 'food', 'wellness'];
 
 export default function ActivitySearchPage() {
+  const [searchParams] = useSearchParams();
+  const tripId = searchParams.get('tripId');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [added, setAdded] = useState(new Set());
@@ -39,10 +42,15 @@ export default function ActivitySearchPage() {
   // Sync existing activities from database on load
   useEffect(() => {
     if (trips && trips.length > 0) {
-      const latestTrip = trips[0];
-      // Check both stop-based and trip-based activities
-      const activities = latestTrip.activities || [];
-      const stopActivities = (latestTrip.itinerary || []).flatMap(s => s.activities || []);
+      // Find the specific trip from the tripId param, or fallback to the latest
+      const currentTrip = tripId 
+        ? trips.find(t => t.id === tripId) 
+        : trips[0];
+      
+      if (!currentTrip) return;
+
+      const activities = currentTrip.trip_activities || [];
+      const stopActivities = (currentTrip.itinerary || []).flatMap(s => s.activities || []);
       const allTripActivities = [...activities, ...stopActivities];
       
       const actNames = new Set(allTripActivities.map(a => a.activity_name));
@@ -54,7 +62,7 @@ export default function ActivitySearchPage() {
       });
       setAdded(newAdded);
     }
-  }, [trips]);
+  }, [trips, tripId]);
 
   const toggleAdd = async (activity) => {
     if (!trips || trips.length === 0) {
@@ -62,40 +70,69 @@ export default function ActivitySearchPage() {
       return;
     }
 
-    const latestTrip = trips[0]; // Add to the most recent trip
+    // Determine which trip to use: URL param first, then latest trip
+    const selectedTrip = tripId 
+      ? trips.find(t => t.id === tripId) 
+      : trips[0];
+
+    if (!selectedTrip) {
+      toast.error('Trip not found. Please open a trip before adding activities.');
+      return;
+    }
+
+    console.log('SUPABASE: Current tripId:', selectedTrip.id);
+    console.log('SUPABASE: Current userId:', selectedTrip.user_id);
 
     if (added.has(activity.id)) {
       try {
-        // Logic to remove from database would go here if we had activity IDs
-        // For now, we'll just update UI and notify
-        setAdded(prev => {
-          const next = new Set(prev);
-          next.delete(activity.id);
-          return next;
-        });
-        toast.success('Activity removed from your trip');
+        console.log('SUPABASE: Removing activity:', activity.name);
+        // Find the activity record in the trip's activities list
+        const activityRecord = (selectedTrip.trip_activities || [])
+          .find(a => a.activity_name === activity.name);
+
+        if (activityRecord) {
+          const { error } = await supabase
+            .from('trip_activities')
+            .delete()
+            .eq('id', activityRecord.id);
+
+          if (error) throw error;
+          
+          setAdded(prev => {
+            const next = new Set(prev);
+            next.delete(activity.id);
+            return next;
+          });
+          await refreshTrips();
+          toast.success('Activity removed from your trip');
+        }
       } catch (error) {
+        console.error('SUPABASE REMOVE ERROR:', error);
         toast.error('Failed to remove activity');
       }
     } else {
       try {
-        console.log('SUPABASE: Adding activity to trip:', latestTrip.id);
+        const payload = {
+          trip_id: selectedTrip.id,
+          user_id: String(selectedTrip.user_id),
+          activity_name: activity.name,
+          category: activity.type,
+          cost: activity.cost,
+          duration: activity.duration,
+          image_url: activity.image
+        };
+        
+        console.log('SUPABASE: Insert activity payload:', payload);
         
         const { data, error } = await supabase
           .from('trip_activities')
-          .insert([{
-            trip_id: latestTrip.id,
-            user_id: String(latestTrip.user_id),
-            activity_name: activity.name,
-            category: activity.type,
-            cost: activity.cost,
-            duration: activity.duration,
-            image_url: activity.image
-          }])
+          .insert([payload])
           .select()
           .single();
 
         if (error) throw error;
+        
+        console.log('SUPABASE: Insert response:', data);
 
         setAdded(prev => {
           const next = new Set(prev);
@@ -103,7 +140,7 @@ export default function ActivitySearchPage() {
           return next;
         });
         await refreshTrips();
-        toast.success(`Added to your trip: ${latestTrip.title}`);
+        toast.success(`Added to your trip: ${selectedTrip.title}`);
       } catch (error) {
         console.error('SUPABASE ACTIVITY ERROR:', error);
         toast.error('Failed to add activity to database');
