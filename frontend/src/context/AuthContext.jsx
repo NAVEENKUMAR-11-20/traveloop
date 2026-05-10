@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
+import { userService } from '../services/userService';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
@@ -19,6 +20,8 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     try {
       const loggedInUser = await authService.loginUser(email, password);
+      // Optional: Sync email/password users too
+      await userService.upsertUser(loggedInUser);
       setUser(loggedInUser);
       toast.success(`Welcome back, ${loggedInUser.name}!`);
       return loggedInUser;
@@ -31,6 +34,15 @@ export function AuthProvider({ children }) {
   const handleGoogleLogin = async (credentialResponse) => {
     try {
       const loggedInUser = await authService.googleAuth(credentialResponse);
+      
+      // Store/Sync user in Supabase
+      try {
+        await userService.upsertUser(loggedInUser);
+      } catch (syncError) {
+        console.error('Failed to sync user with database:', syncError);
+        // We still let them login even if sync fails (offline mode/demo)
+      }
+
       setUser(loggedInUser);
       toast.success(`Welcome, ${loggedInUser.name}!`);
       return loggedInUser;
