@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useTrips } from '../context/TripContext';
 import { format, parseISO } from 'date-fns';
-import { MapPin, Calendar, Clock, Globe, Copy, Share2, Twitter, Facebook } from 'lucide-react';
+import { MapPin, Calendar, Clock, Globe, Copy, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const activityTypes = {
@@ -73,10 +73,10 @@ export default function SharedTripPage() {
             <Copy className="w-4 h-4" /> Copy Link
           </button>
           <button onClick={shareTwitter} className="btn-secondary text-sm flex items-center gap-2">
-            <Twitter className="w-4 h-4" /> Twitter
+            <Share2 className="w-4 h-4" /> Twitter
           </button>
           <button onClick={shareFacebook} className="btn-secondary text-sm flex items-center gap-2">
-            <Facebook className="w-4 h-4" /> Facebook
+            <Share2 className="w-4 h-4" /> Facebook
           </button>
         </div>
 
